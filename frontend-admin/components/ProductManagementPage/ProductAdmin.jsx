@@ -129,7 +129,7 @@ const ProductAdmin = (props) => {
                     <tr className="w-100">
                         <td className='col-infor-product'>
                             <p className="name">
-                                {props.product_name + '-' + props.colour_name + '-' + props.size_name}
+                                {props.product_name}
                             </p>
                             <img src={props.product_image} />
                         </td>

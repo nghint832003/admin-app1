@@ -8,16 +8,12 @@ const Layout = ({ children }) => {
 	const params = useRouter()
 	const isLoggedIn = useSelector((state) => state.admin.isLoggedIn);
 
-	useEffect(() => {
-		if (!isLoggedIn) {
-			Router.push('/login')
-		}
-	}, [isLoggedIn])
+	
 
 	return (
 		<>
 			{
-				params.pathname === '/login'
+				params.pathname === '/'
 					? children : isLoggedIn && (
 						<>
 							<Head>

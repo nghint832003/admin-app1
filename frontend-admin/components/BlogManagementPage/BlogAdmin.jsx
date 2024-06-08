@@ -61,36 +61,6 @@ const BlogAdmin = (props) => {
 };
 
   return (
-    // <div className="table-responsive">
-    //   <table className="table align-middle blog-admin w-100">
-    //     <tbody className="w-100 text-center">
-    //       <tr className="w-100">
-    //         <td className="col-infor-blog">
-    //           <p className="title">{props.title}</p>
-    //           {/* Display blog post content or summary */}
-    //           <p className="content">{props.content}</p>
-    //           {/* You can customize the display of blog post content as needed */}
-    //         </td>
-    //         <td className="col-createAt">
-    //           <p>{convertTime(props.created_at)}</p>
-    //         </td>
-            
-    //         <td className="col-action manipulation">
-    //           {/* Edit link to edit blog post */}
-    //           <Link href={`/blog/${props.id}`}>Edit</Link>
-    //           <br />
-    //           {/* Delete button to delete blog post */}
-    //           <FaTrash
-    //             style={{ cursor: "pointer" }}
-    //             title="Delete"
-    //             className="text-danger"
-    //             onClick={() => handleDelete()}
-    //           />
-    //         </td>
-    //       </tr>
-    //     </tbody>
-    //   </table>
-    // </div>
 
     <div className="table-responsive">
             <table className="table align-middle product-admin w-100">

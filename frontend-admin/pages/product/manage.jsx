@@ -71,7 +71,7 @@ const ProductManagementPage = () => {
                                 <th title='Giá sản phẩm' className="col-price">Giá</th>
                                 {/* <th title='Tồn kho' className="col-quantity">Tồn kho</th> */}
                                 <th title="Thời gian tạo" className="col-createAt">Ngày tạo</th>
-                                <th title="Trạng thái" className="col-state">Trạng thái</th>
+                                {/* <th title="Trạng thái" className="col-state">Trạng thái</th> */}
                                 <th title="Chi tiết" className="col-detail">Chi tiết</th>
                                 <th title="Thao tác" className="col-action manipulation">Thao tác</th>
                             </tr>

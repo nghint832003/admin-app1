@@ -151,9 +151,9 @@ const ProductAdmin = (props) => {
                         <td className="col-createAt">
                             <p>{convertTime(props.created_at)}</p>
                         </td>
-                        <td className="text-danger fw-bold col-state">
+                        {/* <td className="text-danger fw-bold col-state">
                             <Switch checked={props.state} onChange={handleUpdateState} disabled={disabledInputState} />
-                        </td>
+                        </td> */}
                         <td className="text-danger fw-bold col-detail">
                             <Link href={`/product/detail/${props.product_id}`}>
                                 Chi tiết

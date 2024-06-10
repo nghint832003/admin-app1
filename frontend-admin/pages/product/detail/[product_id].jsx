@@ -2,21 +2,39 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import { swalert, swtoast } from "@/mixins/swal.mixin";
+import RowProductVariant from "@/components/DetailProductPage/RowProductVariant";
 
 const DetailProductPage = () => {
     const router = useRouter();
-    const { productId } = router.query;
-    const [product, setProduct] = useState(null);
+    const { product_id } = router.query;
+    const [product, setProduct] = useState({});
+    const [productVariantList, setProductVariantList] = useState([]);
+    const [rowProductVariant, setRowProductVariant] = useState([]);
 
     useEffect(() => {
-        if (productId) {
-            fetchProduct(productId);
+        if (product_id) {
+            fetchProduct(product_id);
         }
-    }, [productId]);
+    }, [product_id]);
 
-    const fetchProduct = async (productId) => {
+    useEffect(() => {
+        setRowProductVariant(
+          productVariantList.map((variant, index) => (
+            <RowProductVariant
+              key={index}
+              index={index}
+              productVariantList={productVariantList}
+              setProductVariantList={setProductVariantList}
+              setIsLoading={setIsLoading}
+              refreshPage={refreshPage}
+            />
+          ))
+        );
+      }, [productVariantList]);
+
+    const fetchProduct = async (product_id) => {
         try {
-            const response = await axios.get(`http://localhost:8000/api/products/${productId}`);
+            const response = await axios.get(`http://localhost:8000/api/products/${product_id}`);
             setProduct(response.data);
         } catch (error) {
             console.error('Error fetching product:', error);
@@ -25,39 +43,49 @@ const DetailProductPage = () => {
         }
     };
 
-    const handleDeleteProduct = async () => {
-        swalert
-            .fire({
-                title: "Delete Product",
-                icon: "warning",
-                text: "Are you sure you want to delete this product?",
-                showCloseButton: true,
-                showCancelButton: true,
-            })
-            .then(async (result) => {
-                if (result.isConfirmed) {
-                    try {
-                        await axios.delete(`http://localhost:8000/api/products/${productId}`);
-                        // Redirect to a different page after deletion
-                        router.push('/products');
-                        swtoast.success({ text: 'Product deleted successfully!' });
-                    } catch (error) {
-                        console.error('Error deleting product:', error);
-                        swtoast.error({ text: 'Error deleting product. Please try again.' });
-                    }
-                }
-            });
-    };
+    const convertProductVariantList = async (productVariants) => {
+        const variants = await Promise.all(
+          productVariants.map(async (variant) => {
+            const fileList = await Promise.all(
+              variant.product_images.map(async ({ path }) => {
+                const response = await fetch(path);
+                const blob = await response.blob();
+                const name = path.slice(-40, -4);
+                const file = new File([blob], name, { type: blob.type });
+                return {
+                  uid: name,
+                  name: name,
+                  url: path,
+                  originFileObj: file,
+                };
+              })
+            );
+            return {
+              productVariantId: variant.id,
+              colourId: variant.colorID,
+              colourName: variant.color,
+              sizeId: variant.sizeID,
+              sizeName: variant.size,
+              quantity: variant.quantity,
+              fileList,
+            };
+          })
+        );
+        return variants;
+      };
+
 
     return (
         <div className="detail-product-page">
             {product ? (
                 <div className="product-details">
-                    <h2>{product.name}</h2>
+                    <h2>{product.nameProduct}</h2>
                     <p>Price: {product.price}</p>
                     <p>Description: {product.description}</p>
+                    <p>Category: {product.categoryID}</p>
+                    <p>Variant: {product.quantity}</p>
                     {/* Render other product details */}
-                    <button onClick={handleDeleteProduct}>Delete Product</button>
+
                 </div>
             ) : (
                 <p>Loading...</p>
@@ -67,4 +95,3 @@ const DetailProductPage = () => {
 };
 
 export default DetailProductPage;
-

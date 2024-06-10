@@ -1,7 +1,7 @@
 import actionTypes from '../actions/actionTypes';
 
 const initialState = {
-    isLoggedIn: false,
+    isLoggedIn: true,
     adminInfo: null,
     adminPersist: null
 };
@@ -19,7 +19,7 @@ const adminReducer = (state = initialState, action) => {
         case actionTypes.ADMIN_LOGOUT:
             return {
                 ...state,
-                isLoggedIn: false,
+                isLoggedIn: true,
                 adminInfo: null,
                 adminPersist: null,
             };

@@ -27,4 +27,11 @@ export const menu = [
 
         ],
     },
+    {
+        title: 'Quản lý User',
+        href: '/user/manage',
+        list: [
+
+        ],
+    },
 ]

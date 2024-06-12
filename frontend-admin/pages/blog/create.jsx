@@ -99,7 +99,7 @@ const CreateBlogPage = () => {
                         </Upload>
                     </div>
                 </div>
-                <div className="description mt-3">
+                <div className="content mt-3">
                     <label htmlFor='blog-content' className="fw-bold">Nội dung:</label>
                     <div className="ckeditor-box">
                         <CKeditor

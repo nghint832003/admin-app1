@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Input, InputNumber, Select, Empty } from 'antd';
+import { Input, InputNumber, Select, Button, Empty } from 'antd';
 import Header from '@/components/Header';
-import ColourBox from '@/components/CreateProductPage/ColourBox';
-import SizeBox from '@/components/CreateProductPage/SizeBox';
 import CKeditor from '@/components/CKEditor';
 import RowProductVariant from '@/components/CreateProductPage/RowProductVariant';
 import Loading from '@/components/Loading';
@@ -14,6 +12,7 @@ const { Option } = Select;
 
 const CreateProductPage = () => {
     const [productName, setProductName] = useState('');
+    const [thumbnail, setThumbnail] = useState('');
     const [categoryId, setCategoryId] = useState('');
     const [categoryName, setCategoryName] = useState('');
     const [price, setPrice] = useState(0);
@@ -30,39 +29,24 @@ const CreateProductPage = () => {
 
     useEffect(() => {
         setEditorLoaded(true);
-    }, []);
 
-    useEffect(() => {
-        const fetchCategories = async () => {
+        const fetchData = async () => {
             try {
-                const response = await axios.get(`${homeAPI}/categories`);
-                setCategories(response.data);
+                const [categoriesRes, coloursRes, sizesRes] = await Promise.all([
+                    axios.get(`${homeAPI}/categories`),
+                    axios.get(`${homeAPI}/product-colors`),
+                    axios.get(`${homeAPI}/product-sizes`)
+                ]);
+
+                setCategories(categoriesRes.data);
+                setColours(coloursRes.data);
+                setSizes(sizesRes.data);
             } catch (error) {
-                console.error('Failed to fetch categories:', error);
+                console.error('Failed to fetch data:', error);
             }
         };
 
-        const fetchColours = async () => {
-            try {
-                const response = await axios.get(`${homeAPI}/product_colors`);
-                setColours(response.data);
-            } catch (error) {
-                console.error('Failed to fetch colours:', error);
-            }
-        };
-
-        const fetchSizes = async () => {
-            try {
-                const response = await axios.get(`${homeAPI}/product_sizes`);
-                setSizes(response.data);
-            } catch (error) {
-                console.error('Failed to fetch sizes:', error);
-            }
-        };
-
-        fetchCategories();
-        fetchColours();
-        fetchSizes();
+        fetchData();
     }, []);
 
     useEffect(() => {
@@ -100,6 +84,7 @@ const CreateProductPage = () => {
                 const newProduct = {
                     nameProduct: productName,
                     price,
+                    thumbnail,
                     categoryID: categoryId,
                     description
                 };
@@ -108,7 +93,7 @@ const CreateProductPage = () => {
 
                 await Promise.all(productVariantList.map(async (variant) => {
                     const dataProductVariant = new FormData();
-                    dataProductVariant.append('productID', productID);
+                    dataProductVariant.append('product_id', productID); // Ensure correct column name
                     dataProductVariant.append('colorID', variant.colorID);
                     dataProductVariant.append('sizeID', variant.sizeID);
                     dataProductVariant.append('quantity', variant.quantity);
@@ -116,15 +101,10 @@ const CreateProductPage = () => {
                     dataProductVariant.append('type', variant.type);
 
                     for (let file of variant.fileList) {
-                        const imageFormData = new FormData();
-                        imageFormData.append('productID', productID);
-                        imageFormData.append('url', file.originFileObj);
-                        await axios.post(`${homeAPI}/product-images`, imageFormData, {
-                            headers: { 'Content-Type': 'multipart/form-data' }
-                        });
+                        dataProductVariant.append('images', file.originFileObj);
                     }
 
-                    await axios.post(`${homeAPI}/product-variants`, dataProductVariant, {
+                    await axios.post(`${homeAPI}/products/${productID}/variants`, dataProductVariant, {
                         headers: { 'Content-Type': 'multipart/form-data' }
                     });
                 }));
@@ -132,8 +112,7 @@ const CreateProductPage = () => {
                 setIsLoading(false);
                 swtoast.success({ text: 'Thêm sản phẩm thành công!' });
                 clearPage();
-            }
- catch (err) {
+            } catch (err) {
                 console.error(err);
                 setIsLoading(false);
                 swtoast.error({ text: 'Đã xảy ra lỗi. Vui lòng thử lại.' });
@@ -156,6 +135,10 @@ const CreateProductPage = () => {
         }
         if (!description) {
             swtoast.error({ text: 'Mô tả sản phẩm không được bỏ trống' });
+            return false;
+        }
+        if (!thumbnail) {
+            swtoast.error({ text: 'Ảnh thu nhỏ không được bỏ trống' });
             return false;
         }
         return true;
@@ -216,6 +199,14 @@ const CreateProductPage = () => {
                             onChange={setPrice}
                         />
                     </div>
+                    <div className="col-6">
+                        <label htmlFor='thumbnail' className="fw-bold">Ảnh thu nhỏ:</label>
+                        <Input
+                            id='thumbnail' placeholder='Link ảnh'
+                            value={thumbnail}
+                            onChange={(e) => setThumbnail(e.target.value)}
+                        />
+                    </div>
                 </div>
                 <div className="description">
                     <label htmlFor='description' className="fw-bold">Mô tả sản phẩm:</label>
@@ -231,23 +222,50 @@ const CreateProductPage = () => {
                         />
                     </div>
                 </div>
-                {/* <div className="row">
+                
+                <div className="row">
                     <div className="col-6">
-                        <ColourBox
-                            colours={colours}
-                            selectedColours={selectedColours}
-                            setSelectedColours={setSelectedColours}
-                        />
+                        <label htmlFor='product-colour' className="fw-bold">Chọn màu sắc:</label>
+                        <Select
+                            id='product-colour'
+                            mode="multiple"
+                            style={{ width: '100%' }}
+                            placeholder="Chọn màu sắc"
+                            value={selectedColours.map(colour => colour.id)}
+                            onChange={(values) => {
+                                const selected = values.map(value => colours.find(colour => colour.id === value));
+                                setSelectedColours(selected);
+                            }}
+                        >
+                            {colours.map(colour => (
+                                <Option key={colour.id} value={colour.id}>
+                                    {colour.color}
+                                </Option>
+                            ))}
+                        </Select>
                     </div>
                     <div className="col-6">
-                        <SizeBox
-                            sizes={sizes}
-                            selectedSizes={selectedSizes}
-                            setSelectedSizes={setSelectedSizes}
-                        />
+                        <label htmlFor='product-size' className="fw-bold">Chọn size:</label>
+                        <Select
+                            id='product-size'
+                            mode="multiple"
+                            style={{ width: '100%' }}
+                            placeholder="Chọn size"
+                            value={selectedSizes.map(size => size.id)}
+                            onChange={(values) => {
+                                const selected = values.map(value => sizes.find(size => size.id === value));
+                                setSelectedSizes(selected);
+                            }}
+                        >
+                            {sizes.map(size => (
+                                <Option key={size.id} value={size.id}>
+                                    {size.size}
+                                </Option>
+                            ))}
+                        </Select>
                     </div>
-                </div> */}
-                {/* <div>
+                </div>
+                <div>
                     <label htmlFor='enter-name' className="fw-bold">Danh sách lựa chọn:</label>
                     <table className="table w-100 table-hover align-middle table-bordered">
                         <thead>
@@ -255,8 +273,8 @@ const CreateProductPage = () => {
                                 <th className='col-colour text-center' scope="col">Màu</th>
                                 <th className='col-size text-center' scope="col">Size</th>
                                 <th className='col-quantity text-center' scope="col">Tồn kho</th>
-                                <th className='col-price text-center' scope="col">Giá</th>
-                                <th className='col-type text-center' scope="col">Loại</th>
+                                {/* <th className='col-price text-center' scope="col">Giá</th>
+                                <th className='col-type text-center' scope="col">Loại</th> */}
                                 <th className='col-image text-center' scope="col">Ảnh</th>
                             </tr>
                         </thead>
@@ -264,11 +282,11 @@ const CreateProductPage = () => {
                             {rowProductVariant.length ? rowProductVariant : <tr><td colSpan={6}><Empty /></td></tr>}
                         </tbody>
                     </table>
-                </div> */}
+                </div>
                 <div className="btn-box text-left">
-                    <button className='text-light bg-dark' onClick={createProduct}>
+                    <Button type='primary' onClick={createProduct} loading={isLoading}>
                         Thêm sản phẩm
-                    </button>
+                    </Button>
                 </div>
             </div>
             {isLoading && <Loading />}

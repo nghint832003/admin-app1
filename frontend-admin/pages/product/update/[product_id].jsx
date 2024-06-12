@@ -3,15 +3,15 @@ import { useRouter } from "next/router";
 import axios from "axios";
 import { Input, InputNumber, Empty, Select } from "antd";
 import Header from "@/components/Header";
-import Category from "@/components/Category";
 import CKeditor from "@/components/CKEditor";
 import RowProductVariant from "@/components/UpdateProductPage/RowProductVariant";
 import Loading from "@/components/Loading";
 import { swtoast } from "@/mixins/swal.mixin";
 import { homeAPI } from "@/config";
 
+const { Option } = Select;
+
 const UpdateProductPage = () => {
-  const { Option } = Select;
   const router = useRouter();
   const { product_id } = router.query;
 
@@ -27,11 +27,11 @@ const UpdateProductPage = () => {
   const [editorLoaded, setEditorLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [productVariantList, setProductVariantList] = useState([]);
-  const [rowProductVariant, setRowProductVariant] = useState([]);
   const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     setEditorLoaded(true);
+    fetchCategories();
   }, []);
 
   useEffect(() => {
@@ -40,50 +40,31 @@ const UpdateProductPage = () => {
     }
   }, [product_id]);
 
-  useEffect(() => {
-    setRowProductVariant(
-      productVariantList.map((variant, index) => (
-        <RowProductVariant
-          key={index}
-          index={index}
-          productVariantList={productVariantList}
-          setProductVariantList={setProductVariantList}
-          setIsLoading={setIsLoading}
-          refreshPage={refreshPage}
-        />
-      ))
-    );
-  }, [productVariantList]);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(`${homeAPI}/categories`);
-        setCategories(response.data);
-      } catch (error) {
-        console.error("Failed to fetch categories:", error);
-      }
-    };
-    fetchCategories();
-  }, []);
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${homeAPI}/categories`);
+      setCategories(response.data);
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
 
   const fetchProduct = async () => {
     try {
       setIsLoading(true);
       const result = await axios.get(`${homeAPI}/products/${product_id}`);
+      const { id, nameProduct, categoryID, name, price, description, product_variant_list } = result.data;
       setProductField({
-        productId: result.data.id,
-        productName: result.data.nameProduct,
-        categoryId: result.data.categoryID,
-        categoryName: result.data.name,
-        price: result.data.price,
-        description: result.data.description,
+        productId: id,
+        productName: nameProduct,
+        categoryId: categoryID,
+        categoryName: name,
+        price,
+        description,
       });
-      setProductVariantList(
-        await convertProductVariantList(result.data.product_variant_list)
-      );
+      setProductVariantList(await convertProductVariantList(product_variant_list));
     } catch (err) {
-      console.log("Something went wrong", err);
+      console.error("Failed to fetch product:", err);
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +72,7 @@ const UpdateProductPage = () => {
 
   const convertProductVariantList = async (productVariants) => {
     if (!Array.isArray(productVariants)) return [];
-    const variants = await Promise.all(
+    return await Promise.all(
       productVariants.map(async (variant) => {
         const fileList = await Promise.all(
           variant.product_images.map(async ({ path }) => {
@@ -109,22 +90,22 @@ const UpdateProductPage = () => {
         );
         return {
           productVariantId: variant.id,
-          colourId: variant.colorID,
-          colourName: variant.color,
+          colorId: variant.colorID,
+          colorName: variant.color,
           sizeId: variant.sizeID,
           sizeName: variant.size,
           quantity: variant.quantity,
+          price: variant.price,
+          priceSale: variant.priceSale,
+          type: variant.type,
+          SKU: variant.SKU,
+          isActive: variant.isActive,
+          createdAt: variant.createdAt,
+          updatedAt: variant.updatedAt,
           fileList,
         };
       })
     );
-    return variants;
-  };
-
-  const refreshPage = async () => {
-    if (product_id) {
-      await fetchProduct();
-    }
   };
 
   const updateProduct = async (e) => {
@@ -132,33 +113,36 @@ const UpdateProductPage = () => {
     if (validate()) {
       try {
         setIsLoading(true);
-        const updateProduct = {
+        const updateProductData = {
           id: productField.productId,
           nameProduct: productField.productName,
           categoryID: productField.categoryId,
           price: productField.price,
           description: productField.description,
         };
-        await axios.put(`${homeAPI}/products/${product_id}`, updateProduct);
 
+        // Update product details
+        await axios.put(`${homeAPI}/products/${product_id}`, updateProductData);
+
+        // Update product variants
         await Promise.all(
-            productVariantList.map(async (variant) => {
-              const data = new FormData();
-              data.append("id", variant.productVariantId);
-              data.append("quantity", variant.quantity);
-              variant.fileList.forEach((file) => {
-                data.append("product_images", file.originFileObj);
-              });
-              await axios.put(`${homeAPI}/product-variant/update`, data, {
-                headers: { "Content-Type": "multipart/form-data" },
-              });
-            })
-          );
+          productVariantList.map(async (variant) => {
+            const data = new FormData();
+            data.append("id", variant.productVariantId);
+            data.append("quantity", variant.quantity);
+            variant.fileList.forEach((file) => {
+              data.append("product_images", file.originFileObj);
+            });
+            await axios.put(`${homeAPI}/products/${product_id}/variants/${variant.productVariantId}`, data, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+          })
+        );
 
         swtoast.success({ text: "Cập nhật sản phẩm thành công!" });
-        refreshPage();
+        fetchProduct();
       } catch (error) {
-        console.log("Failed to update product:", error);
+        console.error("Failed to update product:", error);
         swtoast.error({ text: "Cập nhật sản phẩm thất bại!" });
       } finally {
         setIsLoading(false);
@@ -184,22 +168,6 @@ const UpdateProductPage = () => {
       swtoast.error({ text: "Mô tả sản phẩm không được bỏ trống" });
       return false;
     }
-    // if (!productVariantList.length) {
-    //   swtoast.error({ text: "Sản phẩm phải có ít nhất 1 biến thể" });
-    //   return false;
-    // }
-    // for (const variant of productVariantList) {
-    //   if (!variant.quantity) {
-    //     swtoast.error({
-    //       text: "Biến thể sản phẩm phải có ít nhất một tồn kho",
-    //     });
-    //     return false;
-    //   }
-    //   if (!variant.fileList.length) {
-    //     swtoast.error({ text: "Biến thể sản phẩm phải có ít nhất một ảnh" });
-    //     return false;
-    //   }
-    // }
     return true;
   };
 
@@ -287,16 +255,33 @@ const UpdateProductPage = () => {
                 <th className="col-colour text-center">Color</th>
                 <th className="col-size text-center">Size</th>
                 <th className="col-quantity text-center">Quantity</th>
+                <th className="col-price text-center">Price</th>
+                <th className="col-price-sale text-center">Sale Price</th>
+                <th className="col-type text-center">Type</th>
+                <th className="col-sku text-center">SKU</th>
+                <th className="col-is-active text-center">Active</th>
+                <th className="col-created-at text-center">Created At</th>
+                <th className="col-updated-at text-center">Updated At</th>
                 <th className="col-image text-center">Image</th>
                 <th className="col-delete text-center"></th>
               </tr>
             </thead>
             <tbody>
-              {rowProductVariant.length ? (
-                rowProductVariant
+              {productVariantList.length ? (
+                productVariantList.map((variant, index) => (
+                  <RowProductVariant
+                    key={index}
+                    index={index}
+                    ProductId={productField.productId}
+                    productVariantList={productVariantList}
+                    setProductVariantList={setProductVariantList}
+                    setIsLoading={setIsLoading}
+                    refreshPage={fetchProduct}
+                  />
+                ))
               ) : (
                 <tr>
-                  <td colSpan={5}>
+                  <td colSpan={12}>
                     <Empty />
                   </td>
                 </tr>

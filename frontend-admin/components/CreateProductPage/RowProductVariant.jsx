@@ -15,10 +15,10 @@ const RowProductVariant = ({ index, productVariantList, setProductVariantList })
         <>
             <tr className='row-product-variant'>
                 <td className='col-colour text-center'>
-                    {productVariantList[index].colour_name}
+                    {productVariantList[index].color}
                 </td>
                 <td className='col-size text-center'>
-                    {productVariantList[index].size_name}
+                    {productVariantList[index].size}
                 </td>
                 <td className='col-quantity text-center'>
                     <InputNumber
